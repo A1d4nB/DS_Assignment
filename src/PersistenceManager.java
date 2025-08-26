@@ -1,25 +1,32 @@
-//This class loads a dictionary from a file and saves it back after modifications
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.lang.reflect.Type;
+import java.util.*;
+
+//This class loads a dictionary a file and saves it back after modifications
 public class PersistenceManager {
+    private final Gson gson = new Gson();
+    private final String dictionaryFile;
 
-    PersistenceManager(String dictionaryFile) {}
-
-    synchronized public boolean addWord(String word) {
-
-        return false;
+    public PersistenceManager(String dictionaryFile) {
+        this.dictionaryFile = dictionaryFile;
     }
-    synchronized public boolean removeWord(String word) {
 
-        return false;
+    //DictinonaryServer will call PersistenceManager.fromJson() at startup
+    public Map<String, List<String>> loadDictionary(String dictionaryFile) throws FileNotFoundException {
+        FileReader fr = new FileReader(dictionaryFile);
+        Type type = new TypeToken<Map<String, List<String>>>(){}.getType();
+        return gson.fromJson(fr, type);
     }
-    synchronized public boolean addMeaning(String word,  String meaning) {
 
-        return false;
-    }
-    //not entirely sure what query does
-    synchronized public boolean query(String word) {
-        return false;
-    }
-    synchronized public boolean changeMeaning(String word, String meaning) {
-        return false;
+    //DictionaryManager will call PersistenceManager.toJson() after any modification is made
+    public void saveDictionary(Map<String, List<String>> dictionary) throws IOException {
+        FileWriter fw = new FileWriter(dictionaryFile);
+        gson.toJson(dictionary, fw);
     }
 }
+
