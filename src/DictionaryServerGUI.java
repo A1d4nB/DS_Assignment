@@ -15,8 +15,11 @@ public class DictionaryServerGUI extends JFrame {
     private JTextArea logArea;
     private JLabel ipAddressLabel;
     private JLabel portLabel;
+    private static TCPThreadPoolServer server = null;
 
-    public DictionaryServerGUI() {
+    public DictionaryServerGUI(int port, String dictionaryFile) {
+        int poolSize = 100; // Adjust the pool size as needed
+        server = new TCPThreadPoolServer(poolSize, port, dictionaryFile);
         initialiseGUI();
     }
 
@@ -62,7 +65,7 @@ public class DictionaryServerGUI extends JFrame {
         }
 
         ipAddressLabel = new JLabel("   Server IP Address: " + ipAddress);
-        portLabel = new JLabel("Listening on port: 4444" + "   ");
+        portLabel = new JLabel("Listening on port: " + server.getServerPort()+ "   ");
         panel.add(ipAddressLabel, BorderLayout.WEST);
         panel.add(portLabel, BorderLayout.EAST);
 
@@ -86,23 +89,25 @@ public class DictionaryServerGUI extends JFrame {
 
     public static void main(String[] args) {
         // TODO: Parse command line arguments
-        // Expected: java DictionaryClient.jar <server-address> <server-port> <sleep-duration>
+        // Expected: java DictionaryServerGUI.jar <port> <dictionary-file>
+        int port = Integer.parseInt(args[0]);
+        String dictionaryFile = args[1];
 
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-                } catch (Exception e) {
-                    // Will use default look and feel
-                }
 
-                DictionaryServerGUI gui = new DictionaryServerGUI();
-                gui.setVisible(true);
 
-                // TODO: Initialize socket connection here
-                // gui.setConnectionStatus(true); // Set this when actually connected
+        SwingUtilities.invokeLater(() -> {
+            try {
+                UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+            } catch (Exception e) {
+                // Will use default look and feel
             }
+
+            DictionaryServerGUI gui = new DictionaryServerGUI(port, dictionaryFile);
+            gui.setVisible(true);
+
+            new Thread(() -> server.start()).start();
+            // TODO: Initialize socket connection here
+            // gui.setConnectionStatus(true); // Set this when actually connected
         });
     }
 }

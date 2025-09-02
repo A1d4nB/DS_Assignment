@@ -5,10 +5,11 @@ import java.util.Map;
 //Have maybe switch statements here on a string request input that will separate it into two parts,
 //And send the request to the PersistenceManager who will directly execute the command, modify the dictionary
 //And return the modified dictionary
+//takes care of blocking, RWlock etc...
 
 public class DictionaryManager {
     private final PersistenceManager persistenceManager;
-    private final Map<String, List<String>> dictionary;
+    //private final Map<String, List<String>> dictionary;
 
     public DictionaryManager(String dictionaryFile) {
         this.persistenceManager = new PersistenceManager(dictionaryFile);
@@ -17,7 +18,7 @@ public class DictionaryManager {
 
 
 
-    protected String processRequest(String request) {
+     synchronized protected String processRequest(String request) {
         //Split string here somehow to extract the request itself and the following words
         //Then use Case switch statements to pass it to persistenceManager
         return request;

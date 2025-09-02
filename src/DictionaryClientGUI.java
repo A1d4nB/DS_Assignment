@@ -3,6 +3,11 @@ import javax.swing.border.TitledBorder;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.Socket;
 
 /**
  * ~ Dictionary Client GUI Skeleton ~
@@ -27,6 +32,10 @@ public class DictionaryClientGUI extends JFrame {
     private JButton addMeaningButton;
     private JButton updateMeaningButton;
     private JLabel statusLabel;
+    private static int serverPort;
+    private static String serverAddress;
+    private static int sleepDuration;
+
 
     public DictionaryClientGUI() {
         initializeGUI();
@@ -227,7 +236,20 @@ public class DictionaryClientGUI extends JFrame {
         }
 
         // TODO: Implement socket communication to server
-        displayResult("TODO: Implement search functionality for word: " + word);
+        //displayResult("TODO: Implement search functionality for word: " + word);
+        try (Socket socket = new Socket(serverAddress, serverPort);
+             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+             BufferedReader userInput = new BufferedReader(new InputStreamReader(System.in))) {
+
+            System.out.println("Connected to server: " + serverAddress + ":" + serverPort);
+
+            String message = "SEARCH*" + word + "*";
+            out.println(message);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -322,7 +344,12 @@ public class DictionaryClientGUI extends JFrame {
      */
     public static void main(String[] args) {
         // TODO: Parse command line arguments
-        // Expected: java DictionaryClient.jar <server-address> <server-port> <sleep-duration>
+        // Expected: java DictionaryClientGUI.jar <server-address> <server-port> <sleep-duration>
+
+        serverAddress =args[0];
+        serverPort = Integer.parseInt(args[1]);
+        sleepDuration = Integer.parseInt(args[2]);
+
 
         SwingUtilities.invokeLater(new Runnable() {
             @Override
