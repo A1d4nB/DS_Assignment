@@ -34,14 +34,17 @@ public class DictionaryClientGUI extends JFrame {
     private JLabel statusLabel;
     private static int serverPort;
     private static String serverAddress;
-    private static int sleepDuration;
+    private static int sleepDuration = 0;
+    private Socket socket = null;
+    private PrintWriter out = null;
+    private BufferedReader in = null;
+    private String response = "";
 
-
-    public DictionaryClientGUI() {
+    public DictionaryClientGUI() throws IOException {
         initializeGUI();
     }
 
-    private void initializeGUI() {
+    private void initializeGUI() throws IOException {
         setTitle("Dictionary Client");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
@@ -54,6 +57,12 @@ public class DictionaryClientGUI extends JFrame {
         pack();
         setLocationRelativeTo(null);
         setResizable(true);
+
+        socket = new Socket(serverAddress, serverPort);
+        out = new PrintWriter(socket.getOutputStream(), true);
+        in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+
+        this.setConnectionStatus(true);
     }
 
     private JPanel createConnectionPanel() {
@@ -236,20 +245,14 @@ public class DictionaryClientGUI extends JFrame {
         }
 
         // TODO: Implement socket communication to server
-        //displayResult("TODO: Implement search functionality for word: " + word);
-        try (Socket socket = new Socket(serverAddress, serverPort);
-             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-             BufferedReader userInput = new BufferedReader(new InputStreamReader(System.in))) {
-
-            System.out.println("Connected to server: " + serverAddress + ":" + serverPort);
-
-            String message = "SEARCH*" + word + "*";
-            out.println(message);
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        // implement timer,
+        String message = "QUERY*" + word + "*" + sleepDuration + "*";
+        out.println(message);
+            try {
+                if ((response = in.readLine()) != null) displayResult(response);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
     }
 
     /**
@@ -262,8 +265,13 @@ public class DictionaryClientGUI extends JFrame {
             return;
         }
 
-        // TODO: Implement socket communication to server
-        displayResult("TODO: Implement add word functionality for: " + word);
+        String message = "ADD*" + word + "*" + meanings + "*" + sleepDuration + "*";
+        out.println(message);
+        try {
+            if ((response = in.readLine()) != null) displayResult(response);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**
@@ -276,8 +284,13 @@ public class DictionaryClientGUI extends JFrame {
             return;
         }
 
-        // TODO: Implement socket communication to server
-        displayResult("TODO: Implement remove word functionality for: " + word);
+        String message = "REMOVE*" + word + "*" + sleepDuration + "*";
+        out.println(message);
+        try {
+            if ((response = in.readLine()) != null) displayResult(response);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**
@@ -290,12 +303,17 @@ public class DictionaryClientGUI extends JFrame {
             return;
         }
 
-        // TODO: Implement socket communication to server
-        displayResult("TODO: Implement add meaning functionality for: " + word);
+        String message = "ADDMEANING*" + word + "*" + newMeaning + "*" + sleepDuration + "*";
+        out.println(message);
+        try {
+            if ((response = in.readLine()) != null) displayResult(response);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**
-     * Update an existing meaning of a word
+     * Update the existing meaning of a word
      * You need to implement this
      */
     private void updateMeaning(String word, String existingMeaning, String newMeaning) {
@@ -304,15 +322,20 @@ public class DictionaryClientGUI extends JFrame {
             return;
         }
 
-        // TODO: Implement socket communication to server
-        displayResult("TODO: Implement update meaning functionality for: " + word);
+        String message = "UPDATEMEANING*" + word + "*" + existingMeaning + "*" + newMeaning + "*" + sleepDuration + "*";
+        out.println(message);
+        try {
+            if ((response = in.readLine()) != null) displayResult(response);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**
      * Display result in the result area
      */
     private void displayResult(String result) {
-        resultArea.append(java.time.LocalTime.now() + ": " + result + "\n");
+        resultArea.append(result + "\n");
         resultArea.setCaretPosition(resultArea.getDocument().getLength());
     }
 
@@ -343,29 +366,31 @@ public class DictionaryClientGUI extends JFrame {
      * You should modify this to include command line argument parsing
      */
     public static void main(String[] args) {
-        // TODO: Parse command line arguments
-        // Expected: java DictionaryClientGUI.jar <server-address> <server-port> <sleep-duration>
-
-        serverAddress =args[0];
+        if(args.length != 3) {
+            System.out.println("Not enough arguments.");
+            System.out.println("Usage: java -jar DictionaryClient.jar <server-address> <server-port> <sleep-duration (milliseconds)>");
+            System.exit(1);
+        }
+        serverAddress = args[0];
         serverPort = Integer.parseInt(args[1]);
         sleepDuration = Integer.parseInt(args[2]);
 
-
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-                } catch (Exception e) {
-                    // Will use default look and feel
-                }
-
-                DictionaryClientGUI gui = new DictionaryClientGUI();
-                gui.setVisible(true);
-
-                // TODO: Initialize socket connection here
-                // gui.setConnectionStatus(true); // Set this when actually connected
+        SwingUtilities.invokeLater(() -> {
+            try {
+                UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+            } catch (Exception e) {
+                // Will use default look and feel
             }
+
+            DictionaryClientGUI gui = null;
+            try {
+                gui = new DictionaryClientGUI();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            gui.setVisible(true);
+
+
         });
     }
 }

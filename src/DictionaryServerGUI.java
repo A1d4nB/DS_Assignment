@@ -5,6 +5,7 @@ import javax.swing.border.TitledBorder;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.FileNotFoundException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
@@ -12,14 +13,20 @@ public class DictionaryServerGUI extends JFrame {
 
     private JButton startStopButton;
     private JLabel connCountLabel;
+    private int connCount = 0;
     private JTextArea logArea;
     private JLabel ipAddressLabel;
     private JLabel portLabel;
     private static TCPThreadPoolServer server = null;
 
     public DictionaryServerGUI(int port, String dictionaryFile) {
-        int poolSize = 100; // Adjust the pool size as needed
-        server = new TCPThreadPoolServer(poolSize, port, dictionaryFile);
+        int poolSize = 100;
+
+        try {
+            server = new TCPThreadPoolServer(poolSize, port, dictionaryFile);
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        }
         initialiseGUI();
     }
 
@@ -44,6 +51,20 @@ public class DictionaryServerGUI extends JFrame {
         panel.setBorder(new TitledBorder("Server Status"));
 
         startStopButton = new JButton("Stopped");
+
+        startStopButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if(startStopButton.getText().equals("Stopped")) {
+                    server.startSocketServer();
+                    setConnectionStatus(true);
+                } else {
+                    server.stopSocketServer();
+                    setConnectionStatus(false);
+                }
+            }
+        });
+
         connCountLabel = new JLabel("Connection Count: 0 ");
         panel.add(startStopButton, BorderLayout.WEST);
         panel.add(connCountLabel, BorderLayout.EAST);
@@ -55,7 +76,6 @@ public class DictionaryServerGUI extends JFrame {
         String ipAddress = null;
         JPanel panel = new JPanel();
         panel.setLayout(new BorderLayout());
-        //panel.setBorder(new LineBorder(Color.BLACK));
 
         try {
             InetAddress localHost = InetAddress.getLocalHost();
@@ -75,7 +95,6 @@ public class DictionaryServerGUI extends JFrame {
     private JPanel createLogPanel() {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBorder(new TitledBorder("Server Logs"));
-
         logArea = new JTextArea(20, 80);
         logArea.setEditable(false);
         logArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
@@ -87,27 +106,49 @@ public class DictionaryServerGUI extends JFrame {
         return panel;
     }
 
+    public int getConnCount() {
+        return connCount;
+    }
+
+    public void setConnCount(int connCount) {
+        this.connCount = connCount;
+        connCountLabel.setText("Connection Count: " + connCount);
+    }
+
+    public void setConnectionStatus(boolean isConnected) {
+        if (isConnected) {
+            startStopButton.setText("Running");
+        } else {
+            startStopButton.setText("Stopped");
+        }
+    }
+
+    public void logMessage(String message) {
+        logArea.append(java.time.LocalTime.now() + ": " + message + "\n");
+    }
+
     public static void main(String[] args) {
-        // TODO: Parse command line arguments
-        // Expected: java DictionaryServerGUI.jar <port> <dictionary-file>
+        if(args.length != 2) {
+            System.out.println("Not enough arguments.");
+            System.out.println("Usage: java -jar DictionaryServer.jar <server-port> <dictionary-file>");
+            System.exit(1);
+        }
         int port = Integer.parseInt(args[0]);
         String dictionaryFile = args[1];
-
 
 
         SwingUtilities.invokeLater(() -> {
             try {
                 UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
             } catch (Exception e) {
-                // Will use default look and feel
+
             }
 
             DictionaryServerGUI gui = new DictionaryServerGUI(port, dictionaryFile);
             gui.setVisible(true);
 
-            new Thread(() -> server.start()).start();
-            // TODO: Initialize socket connection here
-            // gui.setConnectionStatus(true); // Set this when actually connected
+            new Thread(() -> server.start(gui)).start();
+
         });
     }
 }

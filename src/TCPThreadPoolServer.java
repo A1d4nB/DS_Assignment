@@ -1,5 +1,5 @@
+import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.ExecutorService;
@@ -9,35 +9,52 @@ public class TCPThreadPoolServer {
     private final ExecutorService threadPool;
     private final DictionaryManager dictionaryManager;
     private final int serverPort;
+    private ServerSocket serverSocket;
+    private DictionaryServerGUI serverGUI;
+    private boolean serverRunning = false;
 
-    public TCPThreadPoolServer(int poolSize, int port, String dictionaryFile) {
+    public TCPThreadPoolServer(int poolSize, int port, String dictionaryFile) throws FileNotFoundException {
         this.threadPool = Executors.newFixedThreadPool(poolSize);
         this.dictionaryManager = new DictionaryManager(dictionaryFile);
         this.serverPort = port;
     }
 
-
-    public void start() {
-
+    public void start(DictionaryServerGUI gui) {
         try {
-            ServerSocket serverSocket = new ServerSocket(serverPort);
-            //serverSocket.setSoTimeout(70000);
-            System.out.println("Server is listening on port " + serverPort);
+            startSocketServer();
+            this.serverGUI = gui;
+            gui.setConnectionStatus(true);
+            gui.logMessage("Server is listening on port " + serverPort);
 
             while (true) {
-                Socket clientSocket = serverSocket.accept();
-
-                // Use the thread pool to handle the client
-                //This will instead create a ClientHandler class instead of what is below.
-                //The ClientHandler will be passed a clientSocket and a dictionaryManager
-                this.threadPool.execute(new ClientHandler(clientSocket));
+                while (serverRunning) {
+                    Socket clientSocket = serverSocket.accept();
+                    this.threadPool.execute(new ClientHandler(clientSocket, serverGUI, dictionaryManager));
+                    serverGUI.setConnCount(serverGUI.getConnCount() + 1);
+                }
             }
         } catch (IOException ex) {
             ex.printStackTrace();
         } finally {
-            // Shutdown the thread pool when the server exits
             this.threadPool.shutdown();
+            gui.setConnectionStatus(false);
         }
+    }
+
+    public void startSocketServer() {
+        try {
+            serverSocket = new ServerSocket(serverPort);
+            serverRunning = true;
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    public void stopSocketServer() {
+        try {
+            serverSocket.close();
+            serverRunning = false;
+        } catch (IOException ex) {}
     }
 
     public int getServerPort() {
